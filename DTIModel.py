@@ -19,53 +19,50 @@ FLAGS = tf.app.flags.FLAGS
 
 # Retreive helper function object
 sdn = SDN.SODMatrix()
+sdloss = SDN.SODLoss(2)
 
 def forward_pass(images, phase_train):
 
     """
-    Train a 3 dimensional network
-    :param images: input images, [batch, box_dims, box_dims, 3]
+    Train a 3 dimensional U-network
+    :param images: input images, [batch, z, y, x]
     :param phase_train: True if this is the training phase
     :return: L2 Loss and Logits
     """
 
     # Initial kernel size
     K = 4
-    images = tf.expand_dims(images, -1)  # 10X40
+    images = tf.expand_dims(images, -1) # batch x 32 x 24 x 40
 
-    # Channel wise layers. Inputs = batchx8x32x32
-    conv = sdn.convolution_3d('conv1', images, 3, K, 1, phase_train=phase_train, padding='VALID')  # 8X38
-    conv = sdn.convolution_3d('conv1b', conv, 3, K * 2, [1, 2, 2], phase_train=phase_train)  # 8X19
+    # 3D Unet here
+    conv1 = sdn.convolution_3d('Conv1a', images, 3, K, S=1, phase_train=phase_train)
 
-    conv = sdn.residual_layer_3d('conv2', conv, 2, K * 2, 1, phase_train=phase_train, padding='VALID')  # 7X18
-    conv = sdn.residual_layer_3d('conv2b', conv, 3, K * 2, 1, phase_train=phase_train, padding='VALID')  # 5X16
-    conv = sdn.residual_layer_3d('conv2c', conv, 3, K * 2, 1, phase_train=phase_train, padding='SAME')  # 5X16
-    conv = sdn.residual_layer_3d('conv2d', conv, 3, K * 4, [1, 2, 2], phase_train=phase_train, padding='SAME')  # 5X8
+    # 16x12x20 begin residuals
+    conv2 = sdn.convolution_3d('Conv1ds', conv1, 3, K*2, S=2, phase_train=phase_train)
+    conv2 = sdn.residual_layer_3d('Conv2a', conv2, 3, K*2, S=1, phase_train=phase_train)
 
-    # Compress Z to 4
-    conv = sdn.convolution_3d('convz', conv, [2, 1, 1], K * 4, 1, phase_train=phase_train, padding='VALID')  #4x8
+    # 8x6x10 Begin inception
+    conv3 = sdn.convolution_3d('Conv2ds', conv2, 3, K*4, S=2, phase_train=phase_train)
+    conv3 = sdn.residual_layer_3d('Conv3a', conv3, 3, K * 4, S=1, phase_train=phase_train)
+    conv3 = sdn.residual_layer_3d('Conv3b', conv3, 3, K * 4, S=1, phase_train=phase_train)
 
-    conv = sdn.inception_layer_3d('conv3', conv, K * 4, 1, 1, phase_train=phase_train, padding='SAME')
-    conv = sdn.inception_layer_3d('conv3b', conv, K * 8, 1, [1, 2, 2], phase_train=phase_train, padding='SAME')  # 4x4
+    # Bottom: 4x3x5
+    conv = sdn.convolution_3d('Conv3ds', conv3, 3, K*8, S=2, phase_train=phase_train)
+    conv = sdn.inception_layer_3d('Conv4a', conv, K*8, S=1, phase_train=phase_train)
+    conv = sdn.residual_layer_3d('Conv4b', conv, 3, K * 8, S=1, phase_train=phase_train)
+    conv = sdn.inception_layer_3d('Conv4c', conv, K * 8, S=1, phase_train=phase_train)
+    conv = sdn.residual_layer_3d('Conv4d', conv, 3, K * 8, S=1, phase_train=phase_train)
+    
+    # Upsample
+    conv = sdn.deconvolution_3d('Dconv4', conv, 3, K*4, 2, phase_train=phase_train, concat=False, concat_var=conv3)
+    conv = sdn.residual_layer_3d('Dconv3a', conv, 3, K * 4, S=1, phase_train=phase_train)
 
-    conv = sdn.inception_layer_3d('conv4', conv, K * 8, 1, 1, phase_train=phase_train)
-    conv = sdn.inception_layer_3d('conv4b', conv, K * 8, 1, 1, phase_train=phase_train)
-    conv = sdn.inception_layer_3d('conv4C', conv, K * 8, 1, 1, phase_train=phase_train)
-    conv = sdn.inception_layer_3d('conv4D', conv, K * 8, 1, 1, phase_train=phase_train)
+    conv = sdn.deconvolution_3d('Dconv3', conv, 3, K * 2, 2, phase_train=phase_train, concat=False, concat_var=conv2)
+    conv = sdn.residual_layer_3d('Dconv2a', conv, 3, K * 2, S=1, phase_train=phase_train)
 
-    # conv = sdn.inception_layer_3d('conv4', conv, K * 8, 1, 1, phase_train=phase_train)
-    # conv = sdn.residual_layer_3d('Rconva', conv, 3, K * 8, 1, phase_train=phase_train)
-    # conv = sdn.inception_layer_3d('conv4b', conv, K * 8, 1, 1, phase_train=phase_train)
-    # conv = sdn.residual_layer_3d('Rconvb', conv, 3, K * 8, 1, phase_train=phase_train)
-    # conv = sdn.inception_layer_3d('conv4C', conv, K * 8, 1, 1, phase_train=phase_train)
-    # conv = sdn.residual_layer_3d('Rconvc', conv, 3, K * 8, 1, phase_train=phase_train)
-    # conv = sdn.inception_layer_3d('conv4D', conv, K * 8, 1, 1, phase_train=phase_train)
-    # conv = sdn.residual_layer_3d('Rconvd', conv, 3, K * 8, 1, phase_train=phase_train)
-
-    # Linear layers
-    linear = sdn.fc7_layer_3d('FC7a', conv, 16, True, phase_train, FLAGS.dropout_factor, override=3, BN=True)
-    linear = sdn.linear_layer('Linear', linear, 4, True, phase_train, FLAGS.dropout_factor, BN=True)
-    Logits = sdn.linear_layer('Softmax', linear, FLAGS.num_classes, relu=False, add_bias=False, BN=False)
+    conv = sdn.deconvolution_3d('Dconv2', conv, 3, K, 2, phase_train=phase_train, concat=False, concat_var=conv1)
+    conv = sdn.convolution_3d('Dconv1a', conv, 3, K, S=1, phase_train=phase_train)
+    Logits = sdn.convolution_3d('Logits', conv, 1, FLAGS.num_classes, S=1, phase_train=phase_train, BN=False, relu=False, bias=False)
 
     # Retreive the weights collection
     weights = tf.get_collection('weights')
@@ -82,40 +79,61 @@ def forward_pass(images, phase_train):
     return Logits, L2_loss  # Return whatever the name of the final logits variable is
 
 
-def total_loss(logits, labels):
+def total_loss(logits_tmp, labels_tmp, loss_type='COMBINED'):
 
     """
-    Add loss to the trainable variables and a summary
-        Args:
-            logits: logits from the forward pass
-            labels the true input labels, a 1-D tensor with 1 value for each image in the batch
-        Returns:
-            Your loss value as a Tensor (float)
+    Loss function.
+    :param logits: Raw logits - batchx32x24x40x2
+    :param labels: The labels - batchx
+    :param type: Type of loss
+    :return:
     """
 
-    # Apply cost sensitive loss here
-    if FLAGS.loss_factor != 1.0:
+    # reduce dimensionality
+    labels, logits = tf.squeeze(labels_tmp), tf.squeeze(logits_tmp)
 
-        # Make a nodule sensitive binary for values > 1 in this case
-        lesion_mask = tf.cast(labels >= FLAGS.loss_class, tf.float32)
+    # Summary images
+    imeg = int(FLAGS.batch_size / 2)
+    tf.summary.image('Labels', tf.reshape(tf.cast(labels[imeg, 16, ...], tf.float32), shape=[1, 24, 40, 1]), 2)
+    tf.summary.image('Logits', tf.reshape(logits_tmp[imeg, 16, :, :, 1], shape=[1, 24, 40, 1]), 2)
 
-        # Now multiply this mask by scaling factor then add back to labels. Add 1 to prevent 0 loss
-        lesion_mask = tf.add(tf.multiply(lesion_mask, FLAGS.loss_factor), 1)
+    # Make labels one hot
+    labels = tf.cast(labels, tf.uint8)
+    labels = tf.cast(tf.one_hot(labels, depth=FLAGS.num_classes, dtype=tf.uint8), tf.float32)
 
-    # Change labels to one hot
-    labels = tf.one_hot(tf.cast(labels, tf.uint8), depth=FLAGS.num_classes, dtype=tf.uint8)
+    # Flatten
+    logits = tf.reshape(logits, [-1, FLAGS.num_classes])
+    labels = tf.cast(tf.reshape(labels, [-1, FLAGS.num_classes]), tf.float32)
 
-    # Calculate  loss
-    loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=tf.squeeze(labels), logits=logits)
+    if loss_type == 'DICE':
 
-    # Apply cost sensitive loss here
-    if FLAGS.loss_factor != 1.0: loss = tf.multiply(loss, tf.squeeze(lesion_mask))
+        # Get the generalized DICE loss
+        loss = sdloss.dice_simple(labels, logits, dim3d=True, scalar=False)
+        loss = tf.reduce_mean(loss)
 
-    # Reduce to scalar
-    loss = tf.reduce_mean(loss)
+    elif loss_type == 'WCE':
 
-    # Output the summary of the MSE and MAE
-    tf.summary.scalar('Cross Entropy', loss)
+        # Weighted CE, beta: > 1 decreases false negatives, <1 decreases false positives
+        loss = sdloss.weighted_cross_entropy(logits, labels, beta=1)
+        loss = tf.reduce_mean(loss)
+
+    else:
+
+        # Combine weighted cross entropy and DICe
+        wce = sdloss.weighted_cross_entropy(logits, labels, 1)
+        wce = tf.reduce_mean(wce)
+        dice = sdloss.dice_simple(labels, logits, dim3d=True, scalar=False)
+        dice = tf.reduce_mean(dice)
+
+        # Add the losses with a weighting for each
+        loss = wce*1 + dice*1
+
+        # Output the summary of the MSE and MAE
+        tf.summary.scalar('Cross Entropy Loss', loss)
+        tf.summary.scalar('Dice Loss', loss)
+
+    # Total loss
+    tf.summary.scalar('Total loss', loss)
 
     # Add these losses to the collection
     tf.add_to_collection('losses', loss)
@@ -170,7 +188,7 @@ def backward_pass(total_loss):
     return dummy_op
 
 
-def inputs(training=True, skip=False):
+def inputs(training=True, skip=True):
 
     """
     Loads the inputs
@@ -182,10 +200,15 @@ def inputs(training=True, skip=False):
 
     # To Do: Skip part 1 and 2 if the protobuff already exists
     if not skip:
-        #Input.pre_proc_25D(FLAGS.box_dims)
-        Input.create_test_set(FLAGS.box_dims)
+        Input.pre_proc()
 
     else:
         print('-------------------------Previously saved records found! Loading...')
 
     return Input.load_protobuf(training)
+
+
+"""
+Segmentation loss functions
+"""
+

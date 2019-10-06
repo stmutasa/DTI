@@ -26,7 +26,7 @@ sdl = SDL.SODLoader(data_root=home_dir)
 sdd = SDD.SOD_Display()
 
 # For loading the files for a 2.5 D network
-def pre_proc(dims=512):
+def pre_proc():
 
     """
     Loads the data into tfrecords
@@ -60,7 +60,7 @@ def pre_proc(dims=512):
         pt_id = basename.split('_')[-1].split('.')[0]
         label_file = dirname + '/' + basename.split('.')[0] + '-label.nii.gz'
 
-        # TODO: Load labels here
+        # TODO: Load info from labels.csv here
 
         # Now load the volumes
         try:
@@ -92,20 +92,15 @@ def pre_proc(dims=512):
         volume = mc.mclahe(volume)
 
         # Save the volume and segments
-        data[index] = {'image_data': volume, 'label_data': segments, 'acc': pt_id, 'file': file, 'mrn': pt_id,
+        data[index] = {'data': volume, 'label_data': segments, 'acc': pt_id, 'file': file, 'mrn': pt_id,
                        'dx': volume.shape[2], 'dy': volume.shape[1], 'dz': volume.shape[0]}
 
-        # Finished with this slice
+        # Finished with this patient
         index += 1
+        pts += 1
 
         # Garbage collection
         del volume, segments
-
-    # Done with this patient
-    pts +=1
-
-    # TODO: Testing
-    plt.show()
 
     # All patients done, print the summary message
     print('%s Patients processed, %s failed[No label, Label out of range, Failed load] %s' % (pts, sum(failures), failures))
@@ -113,8 +108,9 @@ def pre_proc(dims=512):
     # Now create a final protocol buffer
     print('Creating protocol buffer')
     if data:
-        print('%s patients complete, %s volumes saved' % (pts, index))
+        sdl.save_dict_filetypes(data[0])
         sdl.save_tfrecords(data, 2, file_root='data/Vols')
+        print('%s patients complete, %s volumes saved' % (pts, index))
         del data, display
 
 
@@ -143,7 +139,8 @@ def load_protobuf(training=True):
 
     # Load the tfrecords into the dataset with the first map call
     _records_call = lambda dataset: \
-        sdl.load_tfrecords(dataset, [10, FLAGS.box_dims, FLAGS.box_dims], tf.int16)
+        sdl.load_tfrecords(dataset, [32, 24, 40], tf.float32,
+                           segments='label_data', segments_dtype=tf.int16, segments_shape=[32, 24, 40])
 
     # Parse the record into tensors
     dataset = dataset.map(_records_call, num_parallel_calls=tf.data.experimental.AUTOTUNE)
@@ -189,36 +186,20 @@ class DataPreprocessor(object):
 
     if self._distords:  # Training
 
-        # Data Augmentation ------------------ Contrast, brightness, noise, rotate, shear, crop, flip
-
-        # Now normalize. Window level is -600, width is 1500
-        image += 600
-        image /= 1500
-
-        # Then randomly flip
-        image = tf.image.random_flip_left_right(tf.image.random_flip_up_down(image))
-
-        # Random brightness/contrast
-        image = tf.image.random_contrast(image, lower=0.995, upper=1.005)
+        # Data Augmentation ------------------
 
         # For noise, first randomly determine how 'noisy' this study will be
         T_noise = tf.random_uniform([1], 0, 0.02)
 
         # Create a poisson noise array
-        noise = tf.random_uniform(shape=[10, FLAGS.network_dims, FLAGS.network_dims], minval=-T_noise, maxval=T_noise)
+        noise = tf.random_uniform(shape=[32, 24, 40], minval=-T_noise, maxval=T_noise)
 
         # Add the poisson noise
         image = tf.add(image, tf.cast(noise, tf.float32))
-
-    else: # Validation
-
-        # Now normalize. Window level is -600, width is 1500
-        image += 600
-        image /= 1500
 
     # Make record image
     record['data'] = image
 
     return record
 
-pre_proc()
+#pre_proc()
