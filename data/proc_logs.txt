@@ -1,0 +1,85 @@
+WEDGE:
+
+40 Patients complete, 20846 Wedges saved
+tf.app.flags.DEFINE_integer('epoch_size', 20846, """How many images were loaded""")
+tf.app.flags.DEFINE_integer('batch_size', 10423, """Number of images to process in a batch.""")
+Wedges per in this protobuf: 
+[586, 529, 580, 618, 584, 640, 458, 569, 603, 481, 560, 139, 565, 531, 317, 351, 400, 635, 570, 334, 484, 500, 428, 602, 335, 591, 466, 583, 272, 428, 572, 540, 633, 540, 474, 823, 755, 498, 707, 565]
+
+80 Patients complete, 41370 Wedges saved
+tf.app.flags.DEFINE_integer('epoch_size', 20524, """How many images were loaded""")
+tf.app.flags.DEFINE_integer('batch_size', 10262, """Number of images to process in a batch.""")
+Wedges per in this protobuf: 
+[813, 684, 311, 357, 397, 556, 449, 475, 708, 291, 543, 460, 602, 465, 417, 287, 388, 630, 549, 632, 452, 418, 400, 758, 705, 423, 619, 373, 245, 342, 505, 424, 410, 292, 621, 622, 438, 455, 725, 1283]
+
+120 Patients complete, 59751 Wedges saved
+tf.app.flags.DEFINE_integer('epoch_size', 18381, """How many images were loaded""")
+tf.app.flags.DEFINE_integer('batch_size', 6127, """Number of images to process in a batch.""")
+Wedges per in this protobuf: 
+[225, 507, 802, 348, 298, 379, 628, 55, 554, 259, 329, 287, 362, 788, 320, 423, 165, 566, 760, 419, 254, 495, 501, 314, 432, 555, 727, 605, 386, 682, 547, 320, 522, 366, 503, 480, 631, 485, 799, 303]
+
+160 Patients complete, 80922 Wedges saved
+tf.app.flags.DEFINE_integer('epoch_size', 21171, """How many images were loaded""")
+tf.app.flags.DEFINE_integer('batch_size', 7057, """Number of images to process in a batch.""")
+Wedges per in this protobuf: 
+[319, 340, 782, 589, 782, 282, 489, 600, 209, 355, 553, 516, 420, 832, 656, 496, 634, 465, 616, 891, 542, 469, 451, 247, 557, 77, 487, 722, 813, 562, 621, 429, 845, 350, 469, 574, 479, 611, 361, 679]
+
+200 Patients complete, 102154 Wedges saved
+tf.app.flags.DEFINE_integer('epoch_size', 21232, """How many images were loaded""")
+tf.app.flags.DEFINE_integer('batch_size', 5308, """Number of images to process in a batch.""")
+Wedges per in this protobuf: 
+[522, 542, 566, 616, 1113, 228, 350, 654, 276, 539, 382, 445, 767, 520, 835, 475, 522, 546, 303, 1012, 382, 537, 266, 374, 349, 299, 682, 761, 574, 557, 418, 426, 565, 676, 450, 748, 613, 359, 458, 525]
+
+221 Patients saved, 57 failed[No label, Label out of range, Failed load] [37, 19, 1]
+tf.app.flags.DEFINE_integer('epoch_size', 12047, """How many images were loaded""")
+tf.app.flags.DEFINE_integer('batch_size', 12047, """Number of images to process in a batch.""")
+Creating final protocol buffer
+221 patients complete, 114201 images saved
+Patients in this protobuf: 
+[273, 963, 495, 818, 626, 646, 526, 637, 698, 498, 531, 854, 366, 548, 686, 456, 581, 434, 639, 419, 353]
+
+
+
+
+THREE SLICE
+
+40 patients complete, 40 images saved
+Patients in this protobuf:
+['2622480', '2579399', '2656231', '1672867', '2017547', '1448231', '675864', '2650642', '1650485', '362224', '2226697', '2546442', '2606334', '2541228', '2614734', '933138', '2465890', '2306373', '1364924', '2665186', '1873087', '2058401', '2778324', '1882931', '1826770', '1969397', '2547471', '1664401', '1288811', '2440929', '627947', '2164344', '2389971', '1675180', '2528945', '2072042', '3067337', '2577915', '2656226', '3210138']
+
+80 patients complete, 80 images saved
+Patients in this protobuf:
+['1730867', '2644468', '1422664', '2918675', '2637791', '2863479', '2563336', '730120', '1742979', '2800070', '1679995', '2474151', '2062061', '2775371', '2586787', '1232132', '2838409', '2492366', '1202999', '2180495', '1615657', '2720361', '2275584', '2392471', '2840663', '2492689', '2683227', '2312643', '2499683', '2419194', '1808842', '1099623', '1800303', '2044113', '2655723', '1215476', '3217072', '2251829', '2879875', '2956067']
+
+120 patients complete, 120 images saved
+Patients in this protobuf:
+['2879524', '2622637', '2119303', '2991439', '2650242', '3430200', '2076072', '2891181', '1603947', '888448', '3228459', '2109344', '2264605', '2857282', '1889463', '2809579', '2930847', '2699865', '2711117', '617609', '3045880', '2702571', '2381358', '2432325', '1258236', '1558166', '3191026', '2899782', '2615652', '2669826', '2376535', '1918805', '1389305', '1644274', '1896504', '1424094', '2713452', '2318793', '1315965', '1527297']
+
+160 patients complete, 160 images saved
+Patients in this protobuf:
+['2382954', '2834754', '1964271', '1846247', '2736072', '2355595', '2566574', '2715192', '2727520', '647955', '2831984', '2316235', '2563998', '906611', '2688266', '1605810', '1707445', '2735605', '1074859', '1749212', '2702610', '1082751', '2567796', '1367998', '2561392', '1533966', '615121', '1402540', '2831875', '2495091', '2320549', '3158609', '707500', '1904605', '2716332', '2079411', '1352011', '2730430', '1273996', '2431046']
+
+200 patients complete, 200 images saved
+Patients in this protobuf:
+['1766597', '2936015', '2052480', '2074951', '1901745', '1112771', '3022266', '1887799', '2579699', '2794336', '2121806', '2880987', '2706717', '2865710', '1213414', '1543788', '3154971', '2324800', '2847125', '2935953', '2036053', '2613768', '1345097', '2660555', '2711262', '3030338', '1056882', '775215', '2418372', '2973183', '1450346', '1253829', '2871017', '633010', '1970892', '2825232', '2570178', '2585899', '1409952', '2822515']
+
+221 Patients saved, 57 failed[No label, Label out of range, Failed load] [37, 19, 1]
+
+Creating final protocol buffer
+221 patients complete, 221 images saved
+Patients in this protobuf:
+['2667870', '2554416', '2946793', '2637525', '1878716', '2982124', '2951671', '2191314', '2673670', '2651645', '642859', '3136738', '2856223', '1713690', '1157062', '1797479', '3010504', '2706805', '2255159', '1534521', '2349032']
+
+TESTING SET: (512x512x3 files) Aka no Z dimensions
+
+221 patients complete, 5967 TEST images saved, Saving the dictionaries...
+57 failed: [No label, Label out of range, Failed load] [37, 19, 1]
+40 Patients and 1080 examples in this dictionary
+40 Patients and 1080 examples in this dictionary
+40 Patients and 1080 examples in this dictionary
+40 Patients and 1080 examples in this dictionary
+40 Patients and 1080 examples in this dictionary
+21 Patients and 567 examples in this dictionary
+
+
+
