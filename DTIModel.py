@@ -94,8 +94,8 @@ def total_loss(logits_tmp, labels_tmp, loss_type='COMBINED'):
 
     # Summary images
     imeg = int(FLAGS.batch_size / 2)
-    tf.summary.image('Labels', tf.reshape(tf.cast(labels[imeg, 16, ...], tf.float32), shape=[1, 24, 40, 1]), 2)
-    tf.summary.image('Logits', tf.reshape(logits_tmp[imeg, 16, :, :, 1], shape=[1, 24, 40, 1]), 2)
+    tf.summary.image('Labels', tf.reshape(tf.cast(labels[imeg, 20, ...], tf.float32), shape=[1, 24, 40, 1]), 2)
+    tf.summary.image('Logits', tf.reshape(logits_tmp[imeg, 20, :, :, 1], shape=[1, 24, 40, 1]), 2)
 
     # Make labels one hot
     labels = tf.cast(labels, tf.uint8)

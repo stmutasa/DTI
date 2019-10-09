@@ -20,7 +20,7 @@ FLAGS = tf.app.flags.FLAGS
 
 # Define the data directory to use
 # home_dir = str(Path.home()) + '/PycharmProjects/Datasets/DTI_Data/Data Christian/Complete imaging HRNB 3.27.18/DTI selected/'
-home_dir = str(Path.home()) + '/PycharmProjects/Datasets/DTI_Data/'
+home_dir = str(Path.home()) + '/PycharmProjects/Datasets/DTI_Data/DTI/'
 
 sdl = SDL.SODLoader(data_root=home_dir)
 sdd = SDD.SOD_Display()
@@ -35,9 +35,9 @@ def pre_proc():
     """
 
     # First retreive the filenames
-    filenames = sdl.retreive_filelist('nii.gz', path=home_dir+'Test/', include_subfolders=True)
+    filenames = sdl.retreive_filelist('nii.gz', path=home_dir, include_subfolders=False)
     filenames = [x for x in filenames if '.csv' not in x]
-    filenames = [x for x in filenames if '-label' not in x]
+    filenames = [x for x in filenames if '-label' in x]
     shuffle(filenames)
 
     # retrieve the labels
@@ -57,22 +57,24 @@ def pre_proc():
         basename = os.path.basename(file)
 
         # Patient info
-        pt_id = basename.split('_')[-1].split('.')[0]
-        label_file = dirname + '/' + basename.split('.')[0] + '-label.nii.gz'
+        pt_id = basename.split('_')[0]
+        image_file = dirname + '/' + basename.split('-')[0] + '.nii.gz'
+        seq_id = basename.split('-')[0]
 
         # TODO: Load info from labels.csv here
 
         # Now load the volumes
         try:
-            volume = np.squeeze(sdl.load_NIFTY(file))
-            segments = np.squeeze(sdl.load_NIFTY(label_file))
+            volume = np.squeeze(sdl.load_NIFTY(image_file))
+            volume = np.squeeze(volume[..., 0])
+            segments = np.squeeze(sdl.load_NIFTY(file))
         except:
             print ('Unable to load: ', file, '\n')
             failures[2] +=1
             continue
 
         # Swap x and Y axes
-        volume, segments = np.swapaxes(volume, 1, 2), np.swapaxes(segments, 1, 2)
+        volume, segments = np.swapaxes(volume, 2, 0).astype(np.int16), np.swapaxes(segments, 1, 2)
 
         """ 
             There is too much pixel data right now for a 3D network. But, the physis is actually consistently 
@@ -85,14 +87,14 @@ def pre_proc():
         segments, _, _ = sdl.crop_data(segments, [segments.shape[0] // 2, 60, 60], [segments.shape[0] // 2, 12, 20])
 
         # Resize (pad)
-        volume = sdl.pad_resize(volume, [32, 24, 40])
-        segments = sdl.pad_resize(segments, [32, 24, 40])
+        volume = sdl.pad_resize(volume, [40, 24, 40])
+        segments = sdl.pad_resize(segments, [40, 24, 40])
 
         # Normalize the MRI with contrast adaptive histogram normalization
         volume = mc.mclahe(volume)
 
         # Save the volume and segments
-        data[index] = {'data': volume, 'label_data': segments, 'acc': pt_id, 'file': file, 'mrn': pt_id,
+        data[index] = {'data': volume, 'label_data': segments, 'acc': seq_id, 'file': file, 'mrn': pt_id,
                        'dx': volume.shape[2], 'dy': volume.shape[1], 'dz': volume.shape[0]}
 
         # Finished with this patient
@@ -109,7 +111,7 @@ def pre_proc():
     print('Creating protocol buffer')
     if data:
         sdl.save_dict_filetypes(data[0])
-        sdl.save_tfrecords(data, 2, file_root='data/Vols')
+        sdl.save_tfrecords(data, 2, test_size=2, file_root='data/Vols')
         print('%s patients complete, %s volumes saved' % (pts, index))
         del data, display
 
@@ -139,8 +141,8 @@ def load_protobuf(training=True):
 
     # Load the tfrecords into the dataset with the first map call
     _records_call = lambda dataset: \
-        sdl.load_tfrecords(dataset, [32, 24, 40], tf.float32,
-                           segments='label_data', segments_dtype=tf.int16, segments_shape=[32, 24, 40])
+        sdl.load_tfrecords(dataset, [40, 24, 40], tf.float32,
+                           segments='label_data', segments_dtype=tf.int16, segments_shape=[40, 24, 40])
 
     # Parse the record into tensors
     dataset = dataset.map(_records_call, num_parallel_calls=tf.data.experimental.AUTOTUNE)
@@ -192,7 +194,7 @@ class DataPreprocessor(object):
         T_noise = tf.random_uniform([1], 0, 0.02)
 
         # Create a poisson noise array
-        noise = tf.random_uniform(shape=[32, 24, 40], minval=-T_noise, maxval=T_noise)
+        noise = tf.random_uniform(shape=[40, 24, 40], minval=-T_noise, maxval=T_noise)
 
         # Add the poisson noise
         image = tf.add(image, tf.cast(noise, tf.float32))
@@ -202,4 +204,4 @@ class DataPreprocessor(object):
 
     return record
 
-#pre_proc()
+# pre_proc()

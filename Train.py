@@ -61,7 +61,7 @@ def train():
         data, iterator = network.inputs(training=True, skip=True)
 
         # Define input shape
-        data['data'] = tf.reshape(data['data'], [FLAGS.batch_size, 32, 24, 40])
+        data['data'] = tf.reshape(data['data'], [FLAGS.batch_size, 40, 24, 40])
 
         # Perform the forward pass:
         logits, l2loss = network.forward_pass(data['data'], phase_train=phase_train)
@@ -160,12 +160,8 @@ def train():
 
                     # Print the data
                     print('-' * 70)
-                    print('Epoch %d, L2 Loss: = %.3f (%.1f eg/s), Total Loss: %.3f SCE: %.4f'
+                    print('Epoch %d, L2 Loss: = %.3f (%.1f eg/s), Total Loss: %.3f Objective Loss: %.4f'
                           % (Epoch, loss2, FLAGS.batch_size / elapsed, tot, loss1))
-
-                    # Retreive and print the labels and logits
-                    print('Labels: %s' % np.squeeze(lbl1.astype(np.int8))[:20])
-                    print('Logits: %s' % np.squeeze(np.argmax(logtz.astype(np.float), axis=1))[:20])
 
                     # Run a session to retrieve our summaries
                     summary = mon_sess.run(all_summaries, feed_dict={phase_train: True})
