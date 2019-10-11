@@ -38,7 +38,6 @@ def pre_proc():
     filenames = sdl.retreive_filelist('nii.gz', path=home_dir, include_subfolders=False)
     filenames = [x for x in filenames if '.csv' not in x]
     filenames = [x for x in filenames if '-label' in x]
-    shuffle(filenames)
 
     # retrieve the labels
     label_file = sdl.retreive_filelist('csv', path=home_dir, include_subfolders=True)[0]
@@ -83,8 +82,10 @@ def pre_proc():
         """
 
         # Crop
-        volume, _, _ = sdl.crop_data(volume, [volume.shape[0]//2, 60, 60], [volume.shape[0]//2, 12, 20])
-        segments, _, _ = sdl.crop_data(segments, [segments.shape[0] // 2, 60, 60], [segments.shape[0] // 2, 12, 20])
+        _, cn = sdl.largest_blob(segments)
+        # volume, _, _ = sdl.crop_data(volume, [volume.shape[0]//2, 60, 60], [volume.shape[0]//2, 12, 20])
+        volume, _, _ = sdl.crop_data(volume, [volume.shape[0]//2, cn[1]+7, cn[2]], [volume.shape[0]//2, 12, 20])
+        segments, _, _ = sdl.crop_data(segments, [segments.shape[0] // 2, cn[1]+7, cn[2]], [segments.shape[0] // 2, 12, 20])
 
         # Resize (pad)
         volume = sdl.pad_resize(volume, [40, 24, 40])
@@ -111,7 +112,7 @@ def pre_proc():
     print('Creating protocol buffer')
     if data:
         sdl.save_dict_filetypes(data[0])
-        sdl.save_tfrecords(data, 2, test_size=2, file_root='data/Vols')
+        sdl.save_tfrecords(data, 2, test_size=10, file_root='data/Vols')
         print('%s patients complete, %s volumes saved' % (pts, index))
         del data, display
 
@@ -204,4 +205,4 @@ class DataPreprocessor(object):
 
     return record
 
-# pre_proc()
+#pre_proc()

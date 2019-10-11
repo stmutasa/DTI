@@ -108,29 +108,38 @@ def total_loss(logits_tmp, labels_tmp, loss_type='COMBINED'):
     if loss_type == 'DICE':
 
         # Get the generalized DICE loss
-        loss = sdloss.dice_simple(labels, logits, dim3d=True, scalar=False)
+        loss = sdloss.dice(logits, labels)
         loss = tf.reduce_mean(loss)
+        tf.summary.scalar('Dice Loss', loss)
+
+    elif loss_type == 'WASS_DICE':
+
+        # Get the generalized DICE loss
+        loss = sdloss.generalised_wasserstein_dice_loss(labels, logits)
+        loss = tf.reduce_mean(loss)
+        tf.summary.scalar('WassersteinDice Loss', loss)
 
     elif loss_type == 'WCE':
 
         # Weighted CE, beta: > 1 decreases false negatives, <1 decreases false positives
         loss = sdloss.weighted_cross_entropy(logits, labels, beta=1)
         loss = tf.reduce_mean(loss)
+        tf.summary.scalar('Cross Entropy Loss', loss)
 
     else:
 
         # Combine weighted cross entropy and DICe
         wce = sdloss.weighted_cross_entropy(logits, labels, 1)
         wce = tf.reduce_mean(wce)
-        dice = sdloss.dice_simple(labels, logits, dim3d=True, scalar=False)
+        dice = sdloss.dice(logits, labels)
         dice = tf.reduce_mean(dice)
 
         # Add the losses with a weighting for each
-        loss = wce*1 + dice*1
+        loss = wce*1 + dice*10
 
         # Output the summary of the MSE and MAE
-        tf.summary.scalar('Cross Entropy Loss', loss)
-        tf.summary.scalar('Dice Loss', loss)
+        tf.summary.scalar('Cross Entropy Loss', wce)
+        tf.summary.scalar('Dice Loss', dice)
 
     # Total loss
     tf.summary.scalar('Total loss', loss)
@@ -156,7 +165,7 @@ def backward_pass(total_loss):
     tf.summary.scalar('Total_Loss', total_loss)
 
     # Decay the learning rate
-    dk_steps = int((FLAGS.epoch_size / FLAGS.batch_size) * 100)
+    dk_steps = int((FLAGS.epoch_size / FLAGS.batch_size) * 150)
     lr_decayed = tf.train.cosine_decay_restarts(FLAGS.learning_rate, global_step, dk_steps)
 
     # Compute the gradients. NAdam optimizer came in tensorflow 1.2
