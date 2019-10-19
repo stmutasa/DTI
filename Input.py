@@ -8,8 +8,6 @@ import SODLoader as SDL
 import SOD_Display as SDD
 
 from pathlib import Path
-from random import shuffle
-import matplotlib.pyplot as plt
 import os
 
 # TODO: Testing
@@ -19,7 +17,6 @@ import mclahe as mc
 FLAGS = tf.app.flags.FLAGS
 
 # Define the data directory to use
-# home_dir = str(Path.home()) + '/PycharmProjects/Datasets/DTI_Data/Data Christian/Complete imaging HRNB 3.27.18/DTI selected/'
 home_dir = str(Path.home()) + '/PycharmProjects/Datasets/DTI_Data/DTI/'
 
 sdl = SDL.SODLoader(data_root=home_dir)

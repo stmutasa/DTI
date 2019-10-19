@@ -14,8 +14,6 @@ import tensorflow as tf
 import SODLoader as SDL
 from pathlib import Path
 
-sdl= SDL.SODLoader(str(Path.home()) + '/PycharmProjects/Datasets/CT_Chest_ILD/')
-
 # Define flags
 FLAGS = tf.app.flags.FLAGS
 
@@ -29,7 +27,7 @@ tf.app.flags.DEFINE_integer('num_classes', 2, """Number of classes""")
 tf.app.flags.DEFINE_integer('num_epochs', 1000, """Number of epochs to run""")
 tf.app.flags.DEFINE_integer('epoch_size', 72, """How many examples""")
 tf.app.flags.DEFINE_integer('print_interval', 10, """How often to print a summary to console during training""")
-tf.app.flags.DEFINE_integer('checkpoint_interval', 25, """How many Epochs to wait before saving a checkpoint""")
+tf.app.flags.DEFINE_integer('checkpoint_interval', 33, """How many Epochs to wait before saving a checkpoint""")
 tf.app.flags.DEFINE_integer('batch_size', 72, """Number of images to process in a batch.""")
 
 # Hyperparameters:
@@ -46,8 +44,8 @@ tf.app.flags.DEFINE_float('beta2', 0.999, """ The beta 1 value for the adam opti
 
 # Directory control
 tf.app.flags.DEFINE_string('train_dir', 'training/', """Directory to write event logs and save checkpoint files""")
-tf.app.flags.DEFINE_string('RunInfo', 'Initial_weighted/', """Unique file name for this training run""")
-tf.app.flags.DEFINE_integer('GPU', 1, """Which GPU to use""")
+tf.app.flags.DEFINE_string('RunInfo', 'Dice_1/', """Unique file name for this training run""")
+tf.app.flags.DEFINE_integer('GPU', 0, """Which GPU to use""")
 
 def train():
 
@@ -70,7 +68,7 @@ def train():
         labels = data['label_data']
 
         # Calculate loss
-        Loss = network.total_loss(logits, labels, loss_type='COMBINED')
+        Loss = network.total_loss(logits, labels, loss_type='DICE')
 
         # Add the L2 regularization loss
         loss = tf.add(Loss, l2loss, name='TotalLoss')
@@ -96,7 +94,7 @@ def train():
         var_restore = var_ema.variables_to_restore()
 
         # Initialize the saver
-        saver = tf.train.Saver(var_restore, max_to_keep=8)
+        saver = tf.train.Saver(var_restore, max_to_keep=20)
 
         # -------------------  Session Initializer  ----------------------
 
@@ -168,6 +166,8 @@ def train():
 
                     # Add the summaries to the protobuf for Tensorboard
                     summary_writer.add_summary(summary, i)
+
+                    time.sleep(25)
 
                 if i % checkpoint_interval == 0:
 
