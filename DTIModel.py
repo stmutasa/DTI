@@ -51,7 +51,7 @@ def forward_pass(images, phase_train):
     conv = sdn.inception_layer_3d('Conv4a', conv, K*8, S=1, phase_train=phase_train)
     conv = sdn.residual_layer_3d('Conv4b', conv, 3, K * 8, S=1, phase_train=phase_train)
     conv = sdn.inception_layer_3d('Conv4c', conv, K * 8, S=1, phase_train=phase_train)
-    conv = sdn.residual_layer_3d('Conv4d', conv, 3, K * 8, S=1, phase_train=phase_train)
+    conv = sdn.residual_layer_3d('Conv4d', conv, 3, K * 8, S=1, phase_train=phase_train, dropout=FLAGS.dropout_factor)
     
     # Upsample
     conv = sdn.deconvolution_3d('Dconv4', conv, 3, K*4, 2, phase_train=phase_train, concat=False, concat_var=conv3)
@@ -61,7 +61,7 @@ def forward_pass(images, phase_train):
     conv = sdn.residual_layer_3d('Dconv2a', conv, 3, K * 2, S=1, phase_train=phase_train)
 
     conv = sdn.deconvolution_3d('Dconv2', conv, 3, K, 2, phase_train=phase_train, concat=False, concat_var=conv1)
-    conv = sdn.convolution_3d('Dconv1a', conv, 3, K, S=1, phase_train=phase_train)
+    conv = sdn.convolution_3d('Dconv1a', conv, 3, K, S=1, phase_train=phase_train, dropout=FLAGS.dropout_factor)
     Logits = sdn.convolution_3d('Logits', conv, 1, FLAGS.num_classes, S=1, phase_train=phase_train, BN=False, relu=False, bias=False)
 
     # Retreive the weights collection

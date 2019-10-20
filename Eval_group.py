@@ -38,11 +38,9 @@ tf.app.flags.DEFINE_integer('epoch_size', 10, """Batch 1""")
 tf.app.flags.DEFINE_integer('batch_size', 10, """Number of images to process in a batch.""")
 
 # Testing parameters
-tf.app.flags.DEFINE_string('RunInfo', 'Combined_1td/', """Unique file name for this training run""")
+tf.app.flags.DEFINE_string('RunInfo', 'dice10_wce1/', """Unique file name for this training run""")
 tf.app.flags.DEFINE_integer('GPU', 1, """Which GPU to use""")
 tf.app.flags.DEFINE_string('test_files', 'Test', """Testing files""")
-tf.app.flags.DEFINE_integer('sleep', 300, """ Time to sleep before starting test""")
-tf.app.flags.DEFINE_integer('gifs', 0, """ save gifs or not""")
 
 # Hyperparameters:
 tf.app.flags.DEFINE_float('dropout_factor', 0.5, """ Keep probability""")
@@ -99,7 +97,9 @@ def test():
         # Trackers for best performers
         best_MAE, best_epoch = 0.25, 0
 
-        while True:
+        # Run once for all the saved checkpoints
+        ckpt = tf.train.get_checkpoint_state(FLAGS.train_dir + FLAGS.RunInfo)
+        for checkpoint in ckpt.all_model_checkpoint_paths:
 
             # Allow memory placement growth
             config = tf.ConfigProto(log_device_placement=False, allow_soft_placement=True)
@@ -109,26 +109,17 @@ def test():
                 # Print run info
                 print("*** Validation Run %s on GPU %s ****" % (FLAGS.RunInfo, FLAGS.GPU))
 
-                # Retreive the checkpoint
-                ckpt = tf.train.get_checkpoint_state(FLAGS.train_dir+FLAGS.RunInfo)
-
                 # Initialize the variables
                 mon_sess.run(var_init)
 
                 # Initialize iterator
-                mon_sess.run(iterator.initializer)
+                mon_sess.run(iterator.initializer)\
 
-                if ckpt and ckpt.model_checkpoint_path:
+                # Restore the model
+                saver.restore(mon_sess, checkpoint)
 
-                    # Restore the model
-                    saver.restore(mon_sess, ckpt.model_checkpoint_path)
-
-                    # Extract the epoch
-                    Epoch = ckpt.model_checkpoint_path.split('/')[-1].split('_')[-1]
-
-                else:
-                    print ('No checkpoint file found')
-                    break
+                # Extract the epoch
+                Epoch = checkpoint.split('/')[-1].split('_')[-1]
 
                 # Initialize the step counter
                 step = 0
@@ -163,60 +154,35 @@ def test():
                         # Save the checkpoint
                         print(" ---------------- SAVING THIS ONE %s", ckpt.model_checkpoint_path)
 
-                        # Define the filenames
-                        checkpoint_file = os.path.join('testing/' + FLAGS.RunInfo, ('Epoch_%s_DICE_%0.3f' % (Epoch, sdt.AUC)))
+                        # # Define the filenames
+                        # checkpoint_file = os.path.join('testing/' + FLAGS.RunInfo, ('Epoch_%s_DICE_%0.3f' % (Epoch, sdt.AUC)))
+                        #
+                        # # Save the checkpoint
+                        # saver.save(mon_sess, checkpoint_file)
+                        #
+                        # # Save a new best MAE
+                        # best_MAE = mcc
+                        # best_epoch = Epoch
 
-                        # Save the checkpoint
-                        saver.save(mon_sess, checkpoint_file)
+                        # # Delete prior screenshots
+                        # if tf.gfile.Exists('testing/' + FLAGS.RunInfo + 'Screenshots/'):
+                        #     tf.gfile.DeleteRecursively('testing/' + FLAGS.RunInfo + 'Screenshots/')
+                        # tf.gfile.MakeDirs('testing/' + FLAGS.RunInfo + 'Screenshots/')
 
-                        # Save a new best MAE
-                        best_MAE = mcc
-                        best_epoch = Epoch
-
-                        if FLAGS.gif:
-
-                            # Delete prior screenshots
-                            if tf.gfile.Exists('testing/' + FLAGS.RunInfo + 'Screenshots/'):
-                                tf.gfile.DeleteRecursively('testing/' + FLAGS.RunInfo + 'Screenshots/')
-                            tf.gfile.MakeDirs('testing/' + FLAGS.RunInfo + 'Screenshots/')
-
-                            # Plot all images
-                            for i in range (FLAGS.batch_size):
-
-                                file = ('testing/' + FLAGS.RunInfo + 'Screenshots/' + 'test_%s.gif' %i)
-                                sdt.plot_img_and_mask3D(examples['data'][i], pred_map[i], examples['label_data'][i], file)
+                        # # TODO: Plot all the images
+                        # for i in range (FLAGS.batch_size):
+                        #
+                        #     file = ('testing/' + FLAGS.RunInfo + 'Screenshots/' + 'test_%s.gif' %i)
+                        #     sdt.plot_img_and_mask3D(examples['data'][i], pred_map[i], examples['label_data'][i], file)
 
                     # Shut down the session
                     mon_sess.close()
 
-            # # Break if this is the final checkpoint
-            # try:
-            #     if int(Epoch) > 976 in Epoch: break
-            # except:
-            #     if '1000' in Epoch: break
-
             # Print divider
             print('-' * 70)
 
-            # Otherwise check folder for changes
-            filecheck = glob.glob(FLAGS.train_dir+FLAGS.RunInfo + '*')
-            newfilec = filecheck
-
-            # Sleep if no changes
-            while filecheck == newfilec:
-
-                # Sleep an amount of time proportional to the epoch size
-                time.sleep(5)
-
-                # Recheck the folder for changes
-                newfilec = glob.glob(FLAGS.train_dir+FLAGS.RunInfo + '*')
-
 
 def main(argv=None):  # pylint: disable=unused-argument
-    time.sleep(FLAGS.sleep)
-    if tf.gfile.Exists('testing/' + FLAGS.RunInfo):
-        tf.gfile.DeleteRecursively('testing/' + FLAGS.RunInfo)
-    tf.gfile.MakeDirs('testing/' + FLAGS.RunInfo)
     test()
 
 if __name__ == '__main__':
