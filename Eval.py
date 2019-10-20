@@ -38,7 +38,7 @@ tf.app.flags.DEFINE_integer('epoch_size', 10, """Batch 1""")
 tf.app.flags.DEFINE_integer('batch_size', 10, """Number of images to process in a batch.""")
 
 # Testing parameters
-tf.app.flags.DEFINE_string('RunInfo', 'Dice_1/', """Unique file name for this training run""")
+tf.app.flags.DEFINE_string('RunInfo', 'Combined_1t/', """Unique file name for this training run""")
 tf.app.flags.DEFINE_integer('GPU', 1, """Which GPU to use""")
 tf.app.flags.DEFINE_string('test_files', 'Test', """Testing files""")
 
@@ -150,8 +150,9 @@ def test():
 
                 finally:
 
-                    # TODO: Testing
-                    pred_map = sdt.return_binary_segmentation(y_pred, 0.45, 1)
+                    # Testing
+                    pred_map = sdt.return_binary_segmentation(y_pred, 0.45, 1, True)
+                    print ('Epoch: %s, Best Epoch: %s (%.3f)' %(Epoch, best_epoch, best_MAE))
                     dice, mcc = sdt.calculate_segmentation_metrics(pred_map, examples['label_data'])
 
                     # Lets save runs that perform well
@@ -175,7 +176,7 @@ def test():
                             tf.gfile.DeleteRecursively('testing/' + FLAGS.RunInfo + 'Screenshots/')
                         tf.gfile.MakeDirs('testing/' + FLAGS.RunInfo + 'Screenshots/')
 
-                        # # Plot all the images
+                        # # TODO: Plot all the images
                         # for i in range (FLAGS.batch_size):
                         #
                         #     file = ('testing/' + FLAGS.RunInfo + 'Screenshots/' + 'test_%s.gif' %i)
@@ -184,11 +185,11 @@ def test():
                     # Shut down the session
                     mon_sess.close()
 
-            # Break if this is the final checkpoint
-            try:
-                if int(Epoch) > 976 in Epoch: break
-            except:
-                if '1000' in Epoch: break
+            # # Break if this is the final checkpoint
+            # try:
+            #     if int(Epoch) > 976 in Epoch: break
+            # except:
+            #     if '1000' in Epoch: break
 
             # Print divider
             print('-' * 70)
@@ -208,7 +209,7 @@ def test():
 
 
 def main(argv=None):  # pylint: disable=unused-argument
-    time.sleep(60)
+    time.sleep(300)
     if tf.gfile.Exists('testing/' + FLAGS.RunInfo):
         tf.gfile.DeleteRecursively('testing/' + FLAGS.RunInfo)
     tf.gfile.MakeDirs('testing/' + FLAGS.RunInfo)

@@ -177,28 +177,48 @@ class DataPreprocessor(object):
     # Applies transformations to dataset
 
   def __init__(self, distords):
+
     self._distords = distords
 
   def __call__(self, record):
 
     """Process img for training or eval."""
     image = record['data']
+    labels = record['label_data']
 
     if self._distords:  # Training
 
         # Data Augmentation ------------------
 
         # For noise, first randomly determine how 'noisy' this study will be
-        T_noise = tf.random_uniform([1], 0, 0.02)
+        T_noise = tf.random_uniform([1], 0, 0.04)
 
         # Create a poisson noise array
         noise = tf.random_uniform(shape=[40, 24, 40], minval=-T_noise, maxval=T_noise)
 
+        # Perform random rotation. Use nearest neighbor for labels because we need 1 or 0 values
+        img, lbl = [], []
+
+        # Random angle for rotation
+        angle = tf.random_uniform([1], -0.30, 0.30)
+
+        # Perform the rotation
+        for z in range(40):
+            img.append(tf.contrib.image.rotate(image[z], angle, 'BILINEAR'))
+            lbl.append(tf.contrib.image.rotate(tf.cast(labels[z], tf.float32), angle, 'NEAREST'))
+
+        image, labels = tf.stack(img), tf.stack(lbl)
+
         # Add the poisson noise
         image = tf.add(image, tf.cast(noise, tf.float32))
 
+    else: # Testing
+
+        pass
+
     # Make record image
     record['data'] = image
+    record['label_data'] = labels
 
     return record
 
