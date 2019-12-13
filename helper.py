@@ -8,9 +8,9 @@ sdd = SDD.SOD_Display()
 import numpy as np
 
 
-def get_b0():
+def get_b0_siemens():
     """
-    Function to get the B0 sequence from Siemens DTI scans. The B0 comes in a tiled 6x6 image of 128x128
+    Function to get the B0 volume from Siemens DTI scans. The B0 comes in a tiled 6x6 image of 128x128
     For SIEMENS MRI:
     0019; 100A;  Number Of Images In Mosaic
     0019; 100B;  Slice Measurement Duration
@@ -57,12 +57,6 @@ def get_b0():
         ser = info['SeriesDescription'].value
         file_index = dcm.split('/')[-3]
 
-        # If this is the same patient,increment index
-        if acc == lastpt:
-            num += 1
-        else:
-            lastpt = acc
-
         # Work only on DTI sequences
         if 'DTI' not in ser: continue
 
@@ -93,7 +87,12 @@ def get_b0():
                     volume[slice] = patch
                     slice += 1
 
-            # Save the volume as nifti
+            # Save the volume as nifti, If this is the same patientas before, add a number
+            if acc == lastpt:
+                num += 1
+            else:
+                num = 1
+                lastpt = acc
             save_file = ('b0/%s_%s_%s.nii.gz' % (file_index, num, acc))
             sdl.save_volume(volume, save_file)
 
@@ -110,4 +109,4 @@ def get_b0():
             continue
 
 
-get_b0()
+get_b0_siemens()
