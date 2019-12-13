@@ -71,7 +71,6 @@ def get_b0_siemens():
             # Get the image pixels
             image = info.pixel_array
             shape = info['AcquisitionMatrix'].value
-            print('Acc: %s, Ser: %s, B-Value: %s ******* Shape: ' % (acc, ser, bvalue), shape)
 
             # Make the volume
             array_size, slice = 6, 0
@@ -93,7 +92,7 @@ def get_b0_siemens():
             else:
                 num = 1
                 lastpt = acc
-            save_file = ('b0/%s_%s_%s.nii.gz' % (file_index, num, acc))
+            save_file = ('b0/%s_%s.nii.gz' % (file_index, num))
             sdl.save_volume(volume, save_file)
 
             # Increment counter
