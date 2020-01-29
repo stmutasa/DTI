@@ -4,10 +4,6 @@
 #    Computes the total loss using loss()
 #    Performs the backprop using train()
 
-from __future__ import absolute_import  # import multi line and Absolute/Relative
-from __future__ import division  # change the division operator to output float if dividing two integers
-from __future__ import print_function  # use the print function from python 3
-
 _author_ = 'simi'
 
 import tensorflow as tf
@@ -64,19 +60,7 @@ def forward_pass(images, phase_train):
     conv = sdn.convolution_3d('Dconv1a', conv, 3, K, S=1, phase_train=phase_train, dropout=FLAGS.dropout_factor)
     Logits = sdn.convolution_3d('Logits', conv, 1, FLAGS.num_classes, S=1, phase_train=phase_train, BN=False, relu=False, bias=False)
 
-    # Retreive the weights collection
-    weights = tf.get_collection('weights')
-
-    # Sum the losses
-    L2_loss = tf.multiply(tf.add_n([tf.nn.l2_loss(v) for v in weights]), FLAGS.l2_gamma)
-
-    # Add it to the collection
-    tf.add_to_collection('losses', L2_loss)
-
-    # Activation summary
-    tf.summary.scalar('L2_Loss', L2_loss)
-
-    return Logits, L2_loss  # Return whatever the name of the final logits variable is
+    return Logits  # Return whatever the name of the final logits variable is
 
 
 def total_loss(logits_tmp, labels_tmp, loss_type='COMBINED'):

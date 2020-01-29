@@ -1,9 +1,5 @@
 """ Training the network on a single GPU """
 
-from __future__ import absolute_import      # import multi line and Absolute/Relative
-from __future__ import division             # change the division operator to output float if dividing two integers
-from __future__ import print_function       # use the print function from python 3
-
 import os
 import time
 import numpy as np

@@ -30,51 +30,42 @@ FLAGS = tf.app.flags.FLAGS
 
 # Define some of the immutable variables
 tf.app.flags.DEFINE_string('train_dir', 'training/', """Directory to write event logs and save checkpoint files""")
-tf.app.flags.DEFINE_string('data_dir', 'data/', """Path to the data directory.""")
+tf.app.flags.DEFINE_string('data_dir', 'data/test/', """Path to the data directory.""")
 tf.app.flags.DEFINE_integer('num_classes', 2, """ Number of classes""")
 
 # >5k example lesions total
-tf.app.flags.DEFINE_integer('epoch_size', 10, """Batch 1""")
-tf.app.flags.DEFINE_integer('batch_size', 10, """Number of images to process in a batch.""")
+tf.app.flags.DEFINE_integer('epoch_size', 62, """Batch 1""")
+tf.app.flags.DEFINE_integer('batch_size', 62, """Number of images to process in a batch.""")
 
 # Testing parameters
-tf.app.flags.DEFINE_string('RunInfo', 'Combined_1td/', """Unique file name for this training run""")
+tf.app.flags.DEFINE_string('RunInfo', 'New_data1/', """Unique file name for this training run""")
 tf.app.flags.DEFINE_integer('GPU', 1, """Which GPU to use""")
 tf.app.flags.DEFINE_string('test_files', 'Test', """Testing files""")
-tf.app.flags.DEFINE_integer('sleep', 300, """ Time to sleep before starting test""")
+tf.app.flags.DEFINE_integer('sleep', 0, """ Time to sleep before starting test""")
 tf.app.flags.DEFINE_integer('gifs', 0, """ save gifs or not""")
 
 # Hyperparameters:
 tf.app.flags.DEFINE_float('dropout_factor', 0.5, """ Keep probability""")
-tf.app.flags.DEFINE_float('l2_gamma', 1e-3, """ The gamma value for regularization loss""")
 tf.app.flags.DEFINE_float('moving_avg_decay', 0.999, """ The decay rate for the moving average tracker""")
-tf.app.flags.DEFINE_float('loss_factor', 1.0, """Penalty for missing a class is this times more severe""")
-tf.app.flags.DEFINE_integer('loss_class', 1, """For classes this and above, apply the above loss factor.""")
-
-# Hyperparameters to control the optimizer
-tf.app.flags.DEFINE_float('learning_rate', 1e-3, """Initial learning rate""")
-tf.app.flags.DEFINE_float('beta1', 0.9, """ The beta 1 value for the adam optimizer""")
-tf.app.flags.DEFINE_float('beta2', 0.999, """ The beta 1 value for the adam optimizer""")
 
 # Define a custom training class
 def test():
-
-
     # Makes this the default graph where all ops will be added
-    # with tf.Graph().as_default(), tf.device('/cpu:0'):
-    with tf.Graph().as_default(), tf.device('/gpu:' + str(FLAGS.GPU)):
+    with tf.Graph().as_default(), tf.device('/cpu:0'):
+        # with tf.Graph().as_default(), tf.device('/gpu:' + str(FLAGS.GPU)):
 
         # Define phase of training
         phase_train = tf.placeholder(tf.bool)
 
         # Load the images and labels.
-        data, iterator = network.inputs(training=False, skip=True)
+        iterator = network.inputs(training=False, skip=True)
+        data = iterator.get_next()
 
         # Define input shape
         data['data'] = tf.reshape(data['data'], [FLAGS.batch_size, 40, 24, 40])
 
         # Perform the forward pass:
-        logits, l2loss = network.forward_pass(data['data'], phase_train=phase_train)
+        logits = network.forward_pass(data['data'], phase_train=phase_train)
 
         # Retreive softmax
         softmax = tf.nn.softmax(logits)
@@ -138,56 +129,44 @@ def test():
                 # Tester instance
                 sdt = SDT.SODTester(True, False)
 
-                try:
-                    while step < max_steps:
+                # Run inference
+                y_pred, examples = mon_sess.run([softmax, data], feed_dict={phase_train: False})
 
-                        # Load some metrics for testing
-                        y_pred, examples = mon_sess.run([softmax, data], feed_dict={phase_train: False})
+                # Testing
+                pred_map = sdt.return_binary_segmentation(y_pred, 0.45, 1, True)
+                print('Epoch: %s, Best Epoch: %s (%.3f)' % (Epoch, best_epoch, best_MAE))
+                dice, mcc = sdt.calculate_segmentation_metrics(pred_map, examples['label_data'])
 
-                        # Increment step
-                        step += 1
+                # Lets save runs that perform well
+                if mcc >= best_MAE:
 
-                except tf.errors.OutOfRangeError:
-                    print('Done with Training - Epoch limit reached')
+                    # Save the checkpoint
+                    print(" ---------------- SAVING THIS ONE %s", ckpt.model_checkpoint_path)
 
-                finally:
+                    # Define the filenames
+                    checkpoint_file = os.path.join('testing/' + FLAGS.RunInfo, ('Epoch_%s_DICE_%0.3f' % (Epoch, sdt.AUC)))
 
-                    # Testing
-                    pred_map = sdt.return_binary_segmentation(y_pred, 0.45, 1, True)
-                    print ('Epoch: %s, Best Epoch: %s (%.3f)' %(Epoch, best_epoch, best_MAE))
-                    dice, mcc = sdt.calculate_segmentation_metrics(pred_map, examples['label_data'])
+                    # Save the checkpoint
+                    saver.save(mon_sess, checkpoint_file)
 
-                    # Lets save runs that perform well
-                    if mcc >= best_MAE:
+                    # Save a new best MAE
+                    best_MAE = mcc
+                    best_epoch = Epoch
 
-                        # Save the checkpoint
-                        print(" ---------------- SAVING THIS ONE %s", ckpt.model_checkpoint_path)
+                    if FLAGS.gif:
 
-                        # Define the filenames
-                        checkpoint_file = os.path.join('testing/' + FLAGS.RunInfo, ('Epoch_%s_DICE_%0.3f' % (Epoch, sdt.AUC)))
+                        # Delete prior screenshots
+                        if tf.gfile.Exists('testing/' + FLAGS.RunInfo + 'Screenshots/'):
+                            tf.gfile.DeleteRecursively('testing/' + FLAGS.RunInfo + 'Screenshots/')
+                        tf.gfile.MakeDirs('testing/' + FLAGS.RunInfo + 'Screenshots/')
 
-                        # Save the checkpoint
-                        saver.save(mon_sess, checkpoint_file)
+                        # Plot all images
+                        for i in range(FLAGS.batch_size):
+                            file = ('testing/' + FLAGS.RunInfo + 'Screenshots/' + 'test_%s.gif' % i)
+                            sdt.plot_img_and_mask3D(examples['data'][i], pred_map[i], examples['label_data'][i], file)
 
-                        # Save a new best MAE
-                        best_MAE = mcc
-                        best_epoch = Epoch
-
-                        if FLAGS.gif:
-
-                            # Delete prior screenshots
-                            if tf.gfile.Exists('testing/' + FLAGS.RunInfo + 'Screenshots/'):
-                                tf.gfile.DeleteRecursively('testing/' + FLAGS.RunInfo + 'Screenshots/')
-                            tf.gfile.MakeDirs('testing/' + FLAGS.RunInfo + 'Screenshots/')
-
-                            # Plot all images
-                            for i in range (FLAGS.batch_size):
-
-                                file = ('testing/' + FLAGS.RunInfo + 'Screenshots/' + 'test_%s.gif' %i)
-                                sdt.plot_img_and_mask3D(examples['data'][i], pred_map[i], examples['label_data'][i], file)
-
-                    # Shut down the session
-                    mon_sess.close()
+                # Shut down the session
+                mon_sess.close()
 
             # # Break if this is the final checkpoint
             # try:

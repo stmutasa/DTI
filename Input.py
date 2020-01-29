@@ -6,25 +6,24 @@ import numpy as np
 import tensorflow as tf
 import SODLoader as SDL
 import SOD_Display as SDD
+from random import shuffle
 
 from pathlib import Path
 import os
 
-# TODO: Testing
 import mclahe as mc
 
 # Define the flags class for variables
 FLAGS = tf.app.flags.FLAGS
 
 # Define the data directory to use
-home_dir = str(Path.home()) + '/PycharmProjects/Datasets/DTI_Data/DTI/'
+home_dir = str(Path.home()) + '/PycharmProjects/Datasets/DTI_Data/Labeled/'
 
 sdl = SDL.SODLoader(data_root=home_dir)
 sdd = SDD.SOD_Display()
 
 # For loading the files for a 2.5 D network
 def pre_proc():
-
     """
     Loads the data into tfrecords
     :param dims:
@@ -32,8 +31,8 @@ def pre_proc():
     """
 
     # First retreive the filenames
-    filenames = sdl.retreive_filelist('nii.gz', path=home_dir, include_subfolders=False)
-    filenames = [x for x in filenames if '.csv' not in x]
+    filenames = sdl.retreive_filelist('nii.gz', path=home_dir, include_subfolders=True)
+    filenames += sdl.retreive_filelist('nii', path=home_dir, include_subfolders=True)
     filenames = [x for x in filenames if '-label' in x]
 
     # retrieve the labels
@@ -57,20 +56,22 @@ def pre_proc():
         image_file = dirname + '/' + basename.split('-')[0] + '.nii.gz'
         seq_id = basename.split('-')[0]
 
-        # TODO: Load info from labels.csv here
-
         # Now load the volumes
         try:
             volume = np.squeeze(sdl.load_NIFTY(image_file))
-            volume = np.squeeze(volume[..., 0])
+            if int(pt_id) <= 299: volume = np.squeeze(volume[..., 0])
             segments = np.squeeze(sdl.load_NIFTY(file))
         except:
-            print ('Unable to load: ', file, '\n')
-            failures[2] +=1
+            print('Unable to load: ', file, '\n')
+            failures[2] += 1
             continue
 
         # Swap x and Y axes
-        volume, segments = np.swapaxes(volume, 2, 0).astype(np.int16), np.swapaxes(segments, 1, 2)
+        if int(pt_id) <= 299:
+            volume, segments = np.swapaxes(volume, 2, 0).astype(np.int16), np.swapaxes(segments, 1, 2)
+        else:
+            volume, segments = np.swapaxes(volume, 1, 0).astype(np.int16), np.swapaxes(segments, 1, 0)
+            volume, segments = np.swapaxes(volume, 1, 2).astype(np.int16), np.swapaxes(segments, 1, 2)
 
         """ 
             There is too much pixel data right now for a 3D network. But, the physis is actually consistently 
@@ -109,7 +110,7 @@ def pre_proc():
     print('Creating protocol buffer')
     if data:
         sdl.save_dict_filetypes(data[0])
-        sdl.save_tfrecords(data, 2, test_size=10, file_root='data/Vols')
+        sdl.save_segregated_tfrecords(4, data, 'mrn', 'data/Vols')
         print('%s patients complete, %s volumes saved' % (pts, index))
         del data, display
 
@@ -121,18 +122,20 @@ def load_protobuf(training=True):
     Loads the protocol buffer into a form to send to shuffle
     """
 
-    # Define filenames
+    # Load tfrecords with parallel interleave if training
     if training:
-        all_files = sdl.retreive_filelist('tfrecords', False, path=FLAGS.data_dir)
-        filenames = [x for x in all_files if FLAGS.test_files not in x]
+        filenames = sdl.retreive_filelist('tfrecords', False, path=FLAGS.data_dir)
+        files = tf.data.Dataset.list_files(os.path.join(FLAGS.data_dir, '*.tfrecords'))
+        dataset = files.interleave(tf.data.TFRecordDataset, cycle_length=len(filenames),
+                                   num_parallel_calls=tf.data.experimental.AUTOTUNE)
+        print('******** Loading Files: ', filenames)
     else:
-        all_files = sdl.retreive_filelist('tfrecords', False, path=FLAGS.data_dir)
-        filenames = [x for x in all_files if FLAGS.test_files in x]
+        files = sdl.retreive_filelist('tfrecords', False, path=FLAGS.data_dir)
+        dataset = tf.data.TFRecordDataset(files, num_parallel_reads=1)
+        print('******** Loading Files: ', files)
 
-    print('******** Loading Files: ', filenames)
-
-    # Create a dataset from the protobuf
-    dataset = tf.data.TFRecordDataset(filenames)
+    # Repeat -> Shuffle -> Map -> Batch -> Prefetch
+    dataset = dataset.repeat()
 
     # Shuffle the entire dataset then create a batch
     if training: dataset = dataset.shuffle(buffer_size=FLAGS.epoch_size)
@@ -155,21 +158,14 @@ def load_protobuf(training=True):
     # Batch the dataset and drop remainder. Can try batch before map if map is small
     dataset = dataset.batch(FLAGS.batch_size, drop_remainder=True)
 
-    # cache and Prefetch
-    dataset = dataset.cache()
-    dataset = dataset.prefetch(buffer_size=FLAGS.batch_size)
-
-    # Repeat input indefinitely
-    dataset = dataset.repeat()
+    # Prefetch
+    dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
 
     # Make an initializable iterator
     iterator = dataset.make_initializable_iterator()
 
-    # Retreive the batch
-    examples = iterator.get_next()
-
     # Return data as a dictionary
-    return examples, iterator
+    return iterator
 
 
 class DataPreprocessor(object):
@@ -191,16 +187,16 @@ class DataPreprocessor(object):
         # Data Augmentation ------------------
 
         # For noise, first randomly determine how 'noisy' this study will be
-        T_noise = tf.random_uniform([1], 0, 0.04)
+        T_noise = tf.random.uniform([], 0, 0.04)
 
         # Create a poisson noise array
-        noise = tf.random_uniform(shape=[40, 24, 40], minval=-T_noise, maxval=T_noise)
+        noise = tf.random.uniform(shape=[40, 24, 40], minval=-T_noise, maxval=T_noise)
 
         # Perform random rotation. Use nearest neighbor for labels because we need 1 or 0 values
         img, lbl = [], []
 
         # Random angle for rotation
-        angle = tf.random_uniform([1], -0.30, 0.30)
+        angle = tf.random.uniform([], -0.30, 0.30)
 
         # Perform the rotation
         for z in range(40):
@@ -221,5 +217,3 @@ class DataPreprocessor(object):
     record['label_data'] = labels
 
     return record
-
-#pre_proc()

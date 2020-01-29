@@ -18,17 +18,16 @@ from pathlib import Path
 FLAGS = tf.app.flags.FLAGS
 
 # Define some of the data variables
-tf.app.flags.DEFINE_string('data_dir', 'data/', """Path to the data directory.""")
+tf.app.flags.DEFINE_string('data_dir', 'data/train/', """Path to the data directory.""")
 tf.app.flags.DEFINE_string('training_dir', 'training/', """Path to the training directory.""")
-tf.app.flags.DEFINE_string('test_files', 'Test', """Testing files""")
 tf.app.flags.DEFINE_integer('num_classes', 2, """Number of classes""")
 
 # Define some of the immutable variables
 tf.app.flags.DEFINE_integer('num_epochs', 1600, """Number of epochs to run""")
-tf.app.flags.DEFINE_integer('epoch_size', 72, """How many examples""")
+tf.app.flags.DEFINE_integer('epoch_size', 360, """How many examples""")
 tf.app.flags.DEFINE_integer('print_interval', 10, """How often to print a summary to console during training""")
-tf.app.flags.DEFINE_integer('checkpoint_interval', 33, """How many Epochs to wait before saving a checkpoint""")
-tf.app.flags.DEFINE_integer('batch_size', 72, """Number of images to process in a batch.""")
+tf.app.flags.DEFINE_integer('checkpoint_interval', 25, """How many Epochs to wait before saving a checkpoint""")
+tf.app.flags.DEFINE_integer('batch_size', 60, """Number of images to process in a batch.""")
 
 # Hyperparameters:
 tf.app.flags.DEFINE_float('dropout_factor', 0.5, """ Keep probability""")
@@ -44,7 +43,7 @@ tf.app.flags.DEFINE_float('beta2', 0.999, """ The beta 1 value for the adam opti
 
 # Directory control
 tf.app.flags.DEFINE_string('train_dir', 'training/', """Directory to write event logs and save checkpoint files""")
-tf.app.flags.DEFINE_string('RunInfo', 'Combined_1td/', """Unique file name for this training run""")
+tf.app.flags.DEFINE_string('RunInfo', 'New_data1/', """Unique file name for this training run""")
 tf.app.flags.DEFINE_integer('GPU', 0, """Which GPU to use""")
 
 def train():
@@ -56,13 +55,14 @@ def train():
         phase_train = tf.placeholder(tf.bool)
 
         # Load the images and labels.
-        data, iterator = network.inputs(training=True, skip=True)
+        iterator = network.inputs(training=True, skip=True)
+        data = iterator.get_next()
 
         # Define input shape
         data['data'] = tf.reshape(data['data'], [FLAGS.batch_size, 40, 24, 40])
 
         # Perform the forward pass:
-        logits, l2loss = network.forward_pass(data['data'], phase_train=phase_train)
+        logits, l2loss = network.forward_pass(data['data'], phase_train), network.sdn.calc_L2_Loss(FLAGS.l2_gamma)
 
         # Labels
         labels = data['label_data']
@@ -183,8 +183,7 @@ def train():
                     saver.save(mon_sess, checkpoint_file)
 
 
-def main(argv=None):  # pylint: disable=unused-argument
-    time.sleep(0)
+def main(argv=None):
     if tf.gfile.Exists(FLAGS.train_dir + FLAGS.RunInfo):
         tf.gfile.DeleteRecursively(FLAGS.train_dir + FLAGS.RunInfo)
     tf.gfile.MakeDirs(FLAGS.train_dir + FLAGS.RunInfo)
