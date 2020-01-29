@@ -88,7 +88,7 @@ def test():
         saver = tf.train.Saver(var_restore, max_to_keep=3)
 
         # Trackers for best performers
-        best_MAE, best_epoch = 0.25, 0
+        best_score, best_epoch = 0.25, 0
 
         while True:
 
@@ -121,11 +121,6 @@ def test():
                     print ('No checkpoint file found')
                     break
 
-                # Initialize the step counter
-                step = 0
-                # Set the max step count
-                max_steps = int(FLAGS.epoch_size / FLAGS.batch_size)
-
                 # Tester instance
                 sdt = SDT.SODTester(True, False)
 
@@ -134,26 +129,26 @@ def test():
 
                 # Testing
                 pred_map = sdt.return_binary_segmentation(y_pred, 0.45, 1, True)
-                print('Epoch: %s, Best Epoch: %s (%.3f)' % (Epoch, best_epoch, best_MAE))
+                print('Epoch: %s, Best Epoch: %s (%.3f)' % (Epoch, best_epoch, best_score))
                 dice, mcc = sdt.calculate_segmentation_metrics(pred_map, examples['label_data'])
 
                 # Lets save runs that perform well
-                if mcc >= best_MAE:
+                if mcc >= best_score:
 
                     # Save the checkpoint
                     print(" ---------------- SAVING THIS ONE %s", ckpt.model_checkpoint_path)
 
                     # Define the filenames
-                    checkpoint_file = os.path.join('testing/' + FLAGS.RunInfo, ('Epoch_%s_DICE_%0.3f' % (Epoch, sdt.AUC)))
+                    checkpoint_file = os.path.join('testing/' + FLAGS.RunInfo, ('Epoch_%s_DICE_%0.3f' % (Epoch, mcc)))
 
                     # Save the checkpoint
                     saver.save(mon_sess, checkpoint_file)
 
                     # Save a new best MAE
-                    best_MAE = mcc
+                    best_score = mcc
                     best_epoch = Epoch
 
-                    if FLAGS.gif:
+                    if FLAGS.gifs:
 
                         # Delete prior screenshots
                         if tf.gfile.Exists('testing/' + FLAGS.RunInfo + 'Screenshots/'):
@@ -167,12 +162,6 @@ def test():
 
                 # Shut down the session
                 mon_sess.close()
-
-            # # Break if this is the final checkpoint
-            # try:
-            #     if int(Epoch) > 976 in Epoch: break
-            # except:
-            #     if '1000' in Epoch: break
 
             # Print divider
             print('-' * 70)
