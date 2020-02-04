@@ -23,7 +23,7 @@ tf.app.flags.DEFINE_string('training_dir', 'training/', """Path to the training 
 tf.app.flags.DEFINE_integer('num_classes', 2, """Number of classes""")
 
 # Define some of the immutable variables
-tf.app.flags.DEFINE_integer('num_epochs', 1600, """Number of epochs to run""")
+tf.app.flags.DEFINE_integer('num_epochs', 500, """Number of epochs to run""")
 tf.app.flags.DEFINE_integer('epoch_size', 360, """How many examples""")
 tf.app.flags.DEFINE_integer('print_interval', 10, """How often to print a summary to console during training""")
 tf.app.flags.DEFINE_integer('checkpoint_interval', 25, """How many Epochs to wait before saving a checkpoint""")
@@ -34,7 +34,7 @@ tf.app.flags.DEFINE_float('dropout_factor', 0.5, """ Keep probability""")
 tf.app.flags.DEFINE_float('l2_gamma', 1e-3, """ The gamma value for regularization loss""")
 tf.app.flags.DEFINE_float('moving_avg_decay', 0.999, """ The decay rate for the moving average tracker""")
 tf.app.flags.DEFINE_float('loss_factor', 1.0, """The loss weighting factor""")
-tf.app.flags.DEFINE_integer('loss_class', 1, """For classes this and above, apply the above loss factor.""")
+tf.app.flags.DEFINE_integer('loss_claDo yss', 1, """For classes this and above, apply the above loss factor.""")
 
 # Hyperparameters to control the optimizer
 tf.app.flags.DEFINE_float('learning_rate', 1e-2, """Initial learning rate""")
