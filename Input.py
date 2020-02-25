@@ -79,11 +79,14 @@ def pre_proc():
             Crop the volumes starting at about 60, 60, 20 in x and 10 in y, none in z
         """
 
+        # Save the initial z dimensions
+        Zinit, Yinit, Xinit = volume.shape
+
         # Crop
         _, cn = sdl.largest_blob(segments)
         # volume, _, _ = sdl.crop_data(volume, [volume.shape[0]//2, 60, 60], [volume.shape[0]//2, 12, 20])
-        volume, _, _ = sdl.crop_data(volume, [volume.shape[0]//2, cn[1]+7, cn[2]], [volume.shape[0]//2, 12, 20])
-        segments, _, _ = sdl.crop_data(segments, [segments.shape[0] // 2, cn[1]+7, cn[2]], [segments.shape[0] // 2, 12, 20])
+        volume, _, _ = sdl.crop_data(volume, [volume.shape[0] // 2, cn[1] + 7, cn[2]], [volume.shape[0] // 2, 12, 20])
+        segments, _, _ = sdl.crop_data(segments, [segments.shape[0] // 2, cn[1] + 7, cn[2]], [segments.shape[0] // 2, 12, 20])
 
         # Resize (pad)
         volume = sdl.pad_resize(volume, [40, 24, 40])
@@ -93,8 +96,9 @@ def pre_proc():
         volume = mc.mclahe(volume)
 
         # Save the volume and segments
+        # Data was cropped from: Z//2, Ycn + 7 and Xcn to a window Z//2, 12, 20 big then resized to 40, 24, 40
         data[index] = {'data': volume, 'label_data': segments, 'acc': seq_id, 'file': file, 'mrn': pt_id,
-                       'dx': volume.shape[2], 'dy': volume.shape[1], 'dz': volume.shape[0]}
+                       'Zinit': Zinit, 'Yinit': Yinit, 'Xinit': Xinit, 'Ycn': cn[1], 'Xcn': cn[2]}
 
         # Finished with this patient
         index += 1

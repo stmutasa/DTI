@@ -5,3 +5,13 @@ Saving segregated tfrecords... 68 in data/Vols_1
 Saving segregated tfrecords... 56 in data/Vols_2
 Saving segregated tfrecords... 56 in data/Vols_3
 242 patients complete, 242 volumes saved
+
+New Run (Exact same?):
+
+242 Patients processed, 0 failed[No label, Label out of range, Failed load] [0, 0, 0]
+Creating protocol buffer
+Saving segregated tfrecords... 62 in data/Vols_0
+Saving segregated tfrecords... 68 in data/Vols_1
+Saving segregated tfrecords... 56 in data/Vols_2
+Saving segregated tfrecords... 56 in data/Vols_3
+242 patients complete, 242 volumes saved
